@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Renders the packed ldgraph with React 18.3, which entity-escapes string children of <script>.",
+  "dependencies": {
+    "ldgraph": "file:../..",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  }
+}
