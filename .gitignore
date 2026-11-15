@@ -7,3 +7,4 @@ next-env.d.ts
 test/react18/node_modules/
 test-results/
 .DS_Store
+examples/*/AGENTS.md
