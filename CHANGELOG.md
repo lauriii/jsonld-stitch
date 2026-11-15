@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `examples/drupal-canvas`: a Next.js front end that renders a Drupal Canvas content API page's head
+  and JSON-LD graph with `<JsonLd>`, and a `verify` script that checks the served graph against the
+  API's.
+
 ## [0.1.0]
 
 First release.

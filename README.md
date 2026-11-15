@@ -281,6 +281,8 @@ data). Details, and what other approaches get wrong: [docs/security.md](docs/sec
 - **CMS or headless JSON-LD**: `graph={await res.json()}` accepts a whole `{ "@context", "@graph" }`
   document and merges it with your own nodes. A CMS `@context` other than schema.org is kept, on its
   nodes, and nodes under different contexts are never merged.
+  [`examples/drupal-canvas`](examples/drupal-canvas) renders a Drupal Canvas site's head, JSON-LD
+  included, from its content API, with a script that checks the served graph against the API's.
 - **Other React apps**: `JsonLd` is plain React and should work in any RSC host (React Router, Waku) and
   in client-rendered apps, but only Next.js is tested. Outside React, use `serialize()`.
 
