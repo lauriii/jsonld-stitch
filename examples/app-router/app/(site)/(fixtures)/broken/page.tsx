@@ -1,4 +1,4 @@
-import { JsonLd } from "ldgraph";
+import { JsonLd } from "jsonld-stitch";
 import { SITE } from "@/lib/graph";
 
 // Test fixture: check() must report exactly one relative-id and one dangling-ref here.

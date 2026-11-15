@@ -186,7 +186,7 @@ export function report(issues: readonly Issue[]): void {
   const now = performance.now(); // not Date.now(), which Next flags while prerendering
   if (seen.size > 500) seen.clear();
   for (const { rule, message } of issues) {
-    const line = `[ldgraph] ${rule}: ${message}`;
+    const line = `[jsonld-stitch] ${rule}: ${message}`;
     if (!(now - (seen.get(line) ?? -Infinity) < 2000)) console.warn(HINTS[rule] ? `${line} (${HINTS[rule]})` : line);
     seen.set(line, now);
   }

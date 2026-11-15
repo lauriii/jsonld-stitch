@@ -1,7 +1,7 @@
 // Checks the running app against the content API, path by path:
 //   - every JSON-LD block in the served HTML parses back to exactly the API's head.script documents;
 //   - no block contains a raw "<", ">" or "&", and text that has them survives the round trip;
-//   - ldgraph/check finds no issues on the page;
+//   - jsonld-stitch/check finds no issues on the page;
 //   - the API's title, meta and link tags are in the HTML.
 // Usage: CANVAS_CONTENT_API_BASE=https://cms.example.com npm run verify -- / /about
 // APP (default http://localhost:3000) is the running app; OUT, if set, is where to save each page's
@@ -9,7 +9,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { check } from "ldgraph/check";
+import { check } from "jsonld-stitch/check";
 
 const base = process.env.CANVAS_CONTENT_API_BASE?.replace(/\/+$/, "");
 const app = (process.env.APP ?? "http://localhost:3000").replace(/\/+$/, "");

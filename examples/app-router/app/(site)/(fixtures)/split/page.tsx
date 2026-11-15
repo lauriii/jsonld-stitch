@@ -1,5 +1,5 @@
 import type { Product } from "schema-dts";
-import { JsonLd, ref } from "ldgraph";
+import { JsonLd, ref } from "jsonld-stitch";
 import { SITE, organization } from "@/lib/graph";
 
 // Test fixture: one Product split over three blocks, as separate components would render it. The

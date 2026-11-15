@@ -1,5 +1,5 @@
 {
-  "name": "ldgraph-example-drupal-canvas",
+  "name": "jsonld-stitch-example-drupal-canvas",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "verify": "node scripts/verify.mjs"
   },
   "dependencies": {
-    "ldgraph": "file:../..",
+    "jsonld-stitch": "file:../..",
     "next": "16.4.6",
     "react": "19.3.1",
     "react-dom": "19.3.1"

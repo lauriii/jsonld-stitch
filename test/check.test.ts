@@ -14,7 +14,7 @@ const article = {
   sameAs: { "@id": "https://www.wikidata.org/wiki/Q42" },
 };
 
-/** One block as ldgraph renders it. */
+/** One block as jsonld-stitch renders it. */
 const ours = (graph: Nodes): string => `<script type="application/ld+json">${serialize(graph)}</script>`;
 /** One hand-written block, exactly as given. */
 const raw = (text: string, type = "application/ld+json"): string => `<script type="${type}">${text}</script>`;
@@ -44,7 +44,7 @@ describe("check", () => {
 
   it("ignores inactive (hidden-route) blocks and other script types", () => {
     const dangling = serialize({ ...article, publisher: { "@id": `${SITE}/#nobody` } });
-    expect(check(html(raw(dangling, "text/x-ldgraph-inactive"), raw("not json", "application/json"), ours(org)))).toEqual([]);
+    expect(check(html(raw(dangling, "text/x-jsonld-stitch-inactive"), raw("not json", "application/json"), ours(org)))).toEqual([]);
   });
 
   it("reads a DOM through querySelectorAll, active blocks only", () => {

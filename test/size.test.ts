@@ -11,7 +11,7 @@ let out: string;
 const gz = (...files: string[]) => files.reduce((n, f) => n + gzipSync(readFileSync(join(out, f))).length, 0);
 
 beforeAll(() => {
-  out = mkdtempSync(join(tmpdir(), "ldgraph-size-"));
+  out = mkdtempSync(join(tmpdir(), "jsonld-stitch-size-"));
   execFileSync(process.execPath, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.build.json", "--outDir", out, "--removeComments"]);
 }, 60_000);
 afterAll(() => rmSync(out, { recursive: true, force: true }));

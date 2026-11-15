@@ -1,5 +1,5 @@
 import type { CollectionPage } from "schema-dts";
-import { JsonLd, ref } from "ldgraph";
+import { JsonLd, ref } from "jsonld-stitch";
 import { getShop } from "@/lib/data";
 import { SITE, website } from "@/lib/graph";
 

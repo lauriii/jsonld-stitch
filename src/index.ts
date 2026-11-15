@@ -36,7 +36,7 @@ export function JsonLd({
  */
 export function ref<const Id extends string>(node: { readonly "@id": Id }): Ref<Id> {
   if (process.env.NODE_ENV !== "production" && typeof node?.["@id"] !== "string") {
-    console.warn("[ldgraph] ref() needs a node with an @id, but got:", node);
+    console.warn("[jsonld-stitch] ref() needs a node with an @id, but got:", node);
   }
   return { "@id": node["@id"] };
 }

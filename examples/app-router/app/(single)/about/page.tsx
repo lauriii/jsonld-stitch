@@ -1,5 +1,5 @@
 import type { AboutPage } from "schema-dts";
-import { JsonLd, ref } from "ldgraph";
+import { JsonLd, ref } from "jsonld-stitch";
 import { SITE, organization, website } from "@/lib/graph";
 
 // One block for the whole page: pass the site nodes along with the page's own.

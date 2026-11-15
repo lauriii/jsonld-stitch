@@ -1,4 +1,4 @@
-// Proves with the reference JSON-LD processor (jsonld.js) that the blocks ldgraph renders across
+// Proves with the reference JSON-LD processor (jsonld.js) that the blocks jsonld-stitch renders across
 // layouts and pages form one dataset. Input is real HTML: pages the example app served from
 // `next build` (saved in test/fixtures/app-router; test/e2e.test.ts checks they are still what the
 // build serves) and the README's own example, bundled and rendered here. No browser, no network.
@@ -159,7 +159,7 @@ async function readmeHtml(): Promise<string> {
         resolveId(id) {
           if (id === "\0entry.tsx") return id;
           if (id.startsWith("@/")) return `\0${virtual(id.slice(2))}`;
-          if (id === "ldgraph") return join(ROOT, "src", "index.ts");
+          if (id === "jsonld-stitch") return join(ROOT, "src", "index.ts");
           if (/^react(-dom)?(\/|$)/.test(id)) return { id: require.resolve(id), external: true };
           return null;
         },
@@ -172,7 +172,7 @@ async function readmeHtml(): Promise<string> {
   });
   const code = (await build.generate({ format: "esm", codeSplitting: false })).output[0].code;
   await build.close();
-  const dir = mkdtempSync(join(tmpdir(), "ldgraph-readme-"));
+  const dir = mkdtempSync(join(tmpdir(), "jsonld-stitch-readme-"));
   try {
     writeFileSync(join(dir, "readme.mjs"), code);
     const app = await import(/* @vite-ignore */ join(dir, "readme.mjs"));

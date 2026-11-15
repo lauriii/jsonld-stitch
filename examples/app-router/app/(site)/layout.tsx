@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { JsonLd } from "ldgraph";
+import { JsonLd } from "jsonld-stitch";
 import { organization, website } from "@/lib/graph";
 
-export const metadata: Metadata = { title: "ldgraph example" };
+export const metadata: Metadata = { title: "jsonld-stitch example" };
 
 // Root layout: the site-wide nodes, rendered once into <head>. Pages link to them by @id.
 export default function RootLayout({ children }: LayoutProps<"/">) {

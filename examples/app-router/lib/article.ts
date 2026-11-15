@@ -1,5 +1,5 @@
 import type { BlogPosting, BreadcrumbList } from "schema-dts";
-import { ref } from "ldgraph";
+import { ref } from "jsonld-stitch";
 import { SITE, blog, organization } from "@/lib/graph";
 
 /** A post's own nodes. Rich-result fields live on the post; site relationships are refs. */

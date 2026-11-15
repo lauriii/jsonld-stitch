@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { JsonLd } from "ldgraph";
+import { JsonLd } from "jsonld-stitch";
 import { postGraph } from "@/lib/article";
 
 // Rendered per request, streamed in after loading.tsx.

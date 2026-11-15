@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { JsonLd } from "ldgraph";
+import { JsonLd } from "jsonld-stitch";
 import { postGraph } from "@/lib/article";
 
 // The page's nodes come from a child that streams in after the shell.

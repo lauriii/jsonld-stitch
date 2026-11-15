@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { JsonLd } from "ldgraph";
+import { JsonLd } from "jsonld-stitch";
 import { API_BASE, getPage, jsonLdDocuments } from "@/lib/content-api";
 
 // Every path is passed through to the content API. The CMS owns the head, so this page renders

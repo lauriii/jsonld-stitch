@@ -1,5 +1,5 @@
 import type { WebPage } from "schema-dts";
-import { JsonLd, ref } from "ldgraph";
+import { JsonLd, ref } from "jsonld-stitch";
 import { SITE, organization, website } from "@/lib/graph";
 
 // Pages Router: each page is the whole tree, so it renders the whole graph in one block.

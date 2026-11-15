@@ -1,5 +1,5 @@
-// Renders each test page with ldgraph's real <JsonLd> component (react-dom/server, production mode),
-// so every <script> block is the exact bytes ldgraph emits.
+// Renders each test page with jsonld-stitch's real <JsonLd> component (react-dom/server, production mode),
+// so every <script> block is the exact bytes jsonld-stitch emits.
 // Run from the repo root: npm run build && NODE_ENV=production node docs/verification/gen-pages.mjs
 import { createRequire } from "node:module";
 import { writeFileSync } from "node:fs";

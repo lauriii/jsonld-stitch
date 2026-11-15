@@ -111,13 +111,13 @@ const dom = (page: Page) =>
     active: Array.from(document.querySelectorAll('script[type="application/ld+json"]'), (s) =>
       (JSON.parse(s.textContent ?? "")["@graph"] as { "@id": string }[]).map((n) => n["@id"]),
     ),
-    inactive: document.querySelectorAll('script[type="text/x-ldgraph-inactive"]').length,
+    inactive: document.querySelectorAll('script[type="text/x-jsonld-stitch-inactive"]').length,
     marker: (window as unknown as { __marker?: string }).__marker,
   }));
 
 beforeAll(async () => {
   // test/e2e.setup.ts installed the packed tarball: test with its check(), not the source.
-  ({ check } = await import(pathToFileURL(join(APP, "node_modules", "ldgraph", "dist", "check.js")).href));
+  ({ check } = await import(pathToFileURL(join(APP, "node_modules", "jsonld-stitch", "dist", "check.js")).href));
 });
 
 afterAll(async () => {
@@ -125,7 +125,7 @@ afterAll(async () => {
 });
 
 it("installs the packed shape: the client file keeps its directive", () => {
-  const script = readFileSync(join(APP, "node_modules", "ldgraph", "dist", "script.js"), "utf8");
+  const script = readFileSync(join(APP, "node_modules", "jsonld-stitch", "dist", "script.js"), "utf8");
   expect(script.startsWith('"use client";')).toBe(true);
 });
 
@@ -133,7 +133,7 @@ const modes = nextMajor() >= 16 ? (["cache-components", "classic"] as const) : (
 
 describe.each(modes)("next build + start (%s)", (mode) => {
   let server: Server;
-  const env = { LDGRAPH_CC: mode === "classic" ? "0" : "1" };
+  const env = { JSONLD_STITCH_CC: mode === "classic" ? "0" : "1" };
 
   beforeAll(async () => {
     rmSync(join(APP, ".next"), { recursive: true, force: true });
@@ -164,11 +164,11 @@ describe.each(modes)("next build + start (%s)", (mode) => {
   }
 
   // test/jsonld.test.ts runs the JSON-LD processor over saved copies of these pages: they must still
-  // be what the build serves. LDGRAPH_UPDATE_FIXTURES=1 saves them afresh (from the first mode).
+  // be what the build serves. JSONLD_STITCH_UPDATE_FIXTURES=1 saves them afresh (from the first mode).
   it.each(Object.keys(FIXTURES))("serves the blocks saved in the JSON-LD fixture for %s", async (path) => {
     const html = await fetchHtml(server.url + path, UAS.googlebot);
     const file = join(ROOT, "test", "fixtures", "app-router", FIXTURES[path]!);
-    if (process.env.LDGRAPH_UPDATE_FIXTURES === "1" && mode === modes[0]) writeFileSync(file, html);
+    if (process.env.JSONLD_STITCH_UPDATE_FIXTURES === "1" && mode === modes[0]) writeFileSync(file, html);
     expect(ldBlocks(html)).toEqual(ldBlocks(readFileSync(file, "utf8")));
   });
 
@@ -193,8 +193,8 @@ describe.each(modes)("next build + start (%s)", (mode) => {
     const dir = join(APP, ".next", "static");
     const files = readdirSync(dir, { recursive: true, encoding: "utf8" }).filter((f) => f.endsWith(".js"));
     const js = files.map((f) => readFileSync(join(dir, f), "utf8")).join("\n");
-    expect(js).toContain("text/x-ldgraph-inactive");
-    expect(js).not.toContain("[ldgraph]");
+    expect(js).toContain("text/x-jsonld-stitch-inactive");
+    expect(js).not.toContain("[jsonld-stitch]");
     expect(js).not.toContain("dangling-ref");
   });
 
@@ -203,7 +203,7 @@ describe.each(modes)("next build + start (%s)", (mode) => {
     const page = await browser.newPage();
     const problems: string[] = [];
     page.on("console", (m) => {
-      if (m.type() === "error" || /hydrat|\[ldgraph\]/i.test(m.text())) problems.push(m.text());
+      if (m.type() === "error" || /hydrat|\[jsonld-stitch\]/i.test(m.text())) problems.push(m.text());
     });
     page.on("pageerror", (e) => problems.push(e.message));
     try {
@@ -249,7 +249,7 @@ describe("next dev", () => {
     const page = await browser.newPage();
     const messages: string[] = [];
     page.on("console", (m) => {
-      if (m.type() === "error" || /hydrat|\[ldgraph\]/i.test(m.text())) messages.push(m.text());
+      if (m.type() === "error" || /hydrat|\[jsonld-stitch\]/i.test(m.text())) messages.push(m.text());
     });
     page.on("pageerror", (e) => messages.push(e.message));
     try {
@@ -265,13 +265,13 @@ describe("next dev", () => {
     for (const path of ["/", "/blog/hello", "/blog/streamed", "/shop/widget", "/about"]) {
       expect(await visit(path), path).toEqual([]);
     }
-    expect(server.log()).not.toContain("[ldgraph]");
+    expect(server.log()).not.toContain("[jsonld-stitch]");
   });
 
   it("warns about the broken fixture: whole-page rules in the browser, block rules on the server", async () => {
     const messages = await visit("/broken");
-    expect(messages.some((m) => m.includes(`[ldgraph] dangling-ref: ${SITE}/#nobody (from #broken.publisher)`))).toBe(true);
-    expect(server.log()).toContain("[ldgraph] relative-id: #broken");
+    expect(messages.some((m) => m.includes(`[jsonld-stitch] dangling-ref: ${SITE}/#nobody (from #broken.publisher)`))).toBe(true);
+    expect(server.log()).toContain("[jsonld-stitch] relative-id: #broken");
     // Next echoes browser logs into the terminal as "[browser] ..."; the server itself only warns about its rules.
     expect(serverLines(server.log())).not.toContain("dangling-ref");
   });

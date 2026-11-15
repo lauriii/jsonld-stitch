@@ -6,9 +6,9 @@ Text inside `<script>` is not HTML-escaped by the browser: the element ends at t
 followed by a space, `/` or `>`, in any case, and `<!--` changes how the tokenizer reads what follows.
 So any string your graph carries from a CMS or a user can break out of the block unless it is escaped.
 
-## What ldgraph does
+## What jsonld-stitch does
 
-After `JSON.stringify`, ldgraph escapes `<`, `>`, `&`, U+2028 and U+2029 as `\u003c`, `\u003e`,
+After `JSON.stringify`, jsonld-stitch escapes `<`, `>`, `&`, U+2028 and U+2029 as `\u003c`, `\u003e`,
 `\u0026`, `\u2028` and `\u2029`, the same set Next.js uses for its own inline data. These characters can
 only appear inside JSON strings (keys and values alike), where the escape decodes back to the original
 character, so:
@@ -26,7 +26,7 @@ JavaScript engines older than ES2019.
 - Escaping strings as HTML entities (`&amp;`, `&lt;`) is safe but changes your data, because nothing
   decodes entities inside a script.
 
-ldgraph's test suite runs these inputs, and more (lone surrogates, `]]>`, attacker-controlled keys,
+jsonld-stitch's test suite runs these inputs, and more (lone surrogates, `]]>`, attacker-controlled keys,
 `toJSON` returning markup), through a spec-compliant HTML parser.
 
 ## Rendering

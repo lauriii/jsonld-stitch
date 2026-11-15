@@ -1,6 +1,6 @@
 # Verification: does Google join `@id`s across script blocks?
 
-ldgraph renders one block per layout or page and links them by absolute `@id`. JSON-LD 1.1 treats
+jsonld-stitch renders one block per layout or page and links them by absolute `@id`. JSON-LD 1.1 treats
 the blocks on a page as one dataset, and Google's docs say to link items with `@id`, but none of
 Google's examples spans two `<script>` elements. This page records what has been checked, with
 which tool, and what is still open.
@@ -13,21 +13,21 @@ which tool, and what is still open.
 | Does Google's Schema Markup Validator join a Product split across blocks? | validator.schema.org, 3 split pages and 1 control | **Yes**, in all three link styles tested |
 | Does it join an Article, BreadcrumbList or Event split across blocks? | validator.schema.org | **Not tested**: the validator blocked the test machine before those runs |
 | Does the Rich Results Test (Google Search eligibility) join blocks? | search.google.com/test/rich-results | **Not tested**: the test needs a signed-in browser |
-| Does a real CMS graph survive ldgraph unchanged? | `examples/drupal-canvas`, 15 pages of a Drupal Canvas site | **Yes**, but every page had at most one block, so this says nothing about joining |
+| Does a real CMS graph survive jsonld-stitch unchanged? | `examples/drupal-canvas`, 15 pages of a Drupal Canvas site | **Yes**, but every page had at most one block, so this says nothing about joining |
 
 Until the Rich Results Test has been run, the README keeps its advice to put the properties a rich
 result needs on the page's own node.
 
 ## Google's tools
 
-Run on 2026-11-15 against ldgraph 0.1.0 (commit 5a2e369), from headless Chrome on a build machine,
+Run on 2026-11-15 against jsonld-stitch 0.1.0 (commit 5a2e369), from headless Chrome on a build machine,
 in one browser session.
 
 ### Test pages
 
 [`verification/pages/`](verification/pages) holds the 11 pages that were tested or are still to be
 tested. [`verification/gen-pages.mjs`](verification/gen-pages.mjs) renders them with the real
-`<JsonLd>` component through `react-dom/server`, so each block is byte for byte what ldgraph emits,
+`<JsonLd>` component through `react-dom/server`, so each block is byte for byte what jsonld-stitch emits,
 and checks that `serialize()` returns the same string. On the commit that adds this page, running it
 regenerates identical files:
 
@@ -142,7 +142,7 @@ Google does:
   content is an array of nodes, each with its own `@context`, stays in the default graph.
 
 The Schema Markup Validator runs above used blocks in this `{"@context", "@graph"}` form, and it
-joined them, so this caveat did not affect Google's validator. ldgraph's output format is unchanged.
+joined them, so this caveat did not affect Google's validator. jsonld-stitch's output format is unchanged.
 
 ## A real CMS graph (`examples/drupal-canvas`)
 
@@ -156,9 +156,9 @@ the API:
 - Real text containing `&` and `<` was served as `&` and `<`, and no block held a raw `<`,
   `>`, `&`, U+2028 or U+2029.
 - Headless Chromium on `next start` and `next dev` logged no hydration warnings, page errors or
-  `[ldgraph]` warnings, and `check()` on the live DOM after hydration found nothing.
+  `[jsonld-stitch]` warnings, and `check()` on the live DOM after hydration found nothing.
 - Negative control: changing one value ("Home" to "Hone") in the served HTML made the script report a
   mismatch and exit 1.
 
-This shows that ldgraph carries a real CMS graph through unchanged and safely escaped. No page had
+This shows that jsonld-stitch carries a real CMS graph through unchanged and safely escaped. No page had
 more than one block, so it is no evidence about joining across blocks.

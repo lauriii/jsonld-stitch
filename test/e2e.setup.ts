@@ -1,4 +1,4 @@
-// Runs once before the e2e file is collected: pack ldgraph and install the tarball (plus NEXT_VERSION,
+// Runs once before the e2e file is collected: pack jsonld-stitch and install the tarball (plus NEXT_VERSION,
 // when set) into examples/app-router, so the tests see the published shape and the right Next.
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 export default function setup(): void {
   const root = fileURLToPath(new URL("..", import.meta.url));
-  const tmp = mkdtempSync(join(tmpdir(), "ldgraph-pack-"));
+  const tmp = mkdtempSync(join(tmpdir(), "jsonld-stitch-pack-"));
   const npm = (args: string[], cwd: string) => execFileSync("npm", args, { cwd, stdio: "pipe" });
   try {
     npm(["pack", "--pack-destination", tmp, "--silent"], root);

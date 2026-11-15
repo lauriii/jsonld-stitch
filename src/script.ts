@@ -1,12 +1,12 @@
 "use client";
-// The only client code ldgraph ships. The server renders a plain data block for crawlers. In the
+// The only client code jsonld-stitch ships. The server renders a plain data block for crawlers. In the
 // browser a block is JSON-LD only while it is shown: React <Activity> keeps hidden routes in the DOM
 // (Next keeps up to 3 with Cache Components), and a hidden page's block must not read as page data.
 import { createElement, useEffect, useLayoutEffect, useRef, type ReactElement } from "react";
 
 const ACTIVE = "application/ld+json";
 // Deliberately not containing "ld+json", so even a loose [type*="ld+json"] selector skips it.
-const INACTIVE = "text/x-ldgraph-inactive";
+const INACTIVE = "text/x-jsonld-stitch-inactive";
 const server = typeof document === "undefined";
 // A layout effect is cleaned up whenever React hides its content: <Activity>, and a Suspense boundary
 // that shows its fallback again. The server branch only avoids React 18's useLayoutEffect warning.

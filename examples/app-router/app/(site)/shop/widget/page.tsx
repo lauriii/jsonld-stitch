@@ -1,5 +1,5 @@
 import type { BreadcrumbList, Product } from "schema-dts";
-import { JsonLd, ref } from "ldgraph";
+import { JsonLd, ref } from "jsonld-stitch";
 import { SITE, organization } from "@/lib/graph";
 
 const url = `${SITE}/shop/widget`;

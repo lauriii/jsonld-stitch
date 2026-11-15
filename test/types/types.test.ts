@@ -1,8 +1,8 @@
 // Type tests: compiled (never run) against schema-dts 1.x and 2.x with skipLibCheck off.
 // Every @ts-expect-error must be needed, or tsc fails.
 import type { Article, BreadcrumbList, Graph, Organization, Product, Thing, WebSite, WithContext } from "schema-dts";
-import { JsonLd, ref, serialize, type Nodes, type Ref } from "ldgraph";
-import { check, type Issue, type Rule } from "ldgraph/check";
+import { JsonLd, ref, serialize, type Nodes, type Ref } from "jsonld-stitch";
+import { check, type Issue, type Rule } from "jsonld-stitch/check";
 
 const SITE = "https://example.com";
 

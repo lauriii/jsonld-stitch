@@ -17,7 +17,7 @@ them (the reference processor, Google's validator, the Rich Results Test) is rec
 - **Within one block**, `serialize()` merges nodes that share an `@id` and a `@context`. Properties are
   combined and the first value wins, so a block never says two things about one property. A dev
   `conflict` warning shows when values differ.
-- **Across blocks**, ldgraph controls nothing: a JSON-LD processor keeps every value, so the page's
+- **Across blocks**, jsonld-stitch controls nothing: a JSON-LD processor keeps every value, so the page's
   graph holds both. `check()` and the browser's `conflict` warning flag this.
 - **Different contexts** are never merged: under a context with its own `@vocab`, the same keys mean
   different things.
@@ -37,7 +37,7 @@ A hidden page's block would otherwise stay in the document, so analytics tags, b
 agents reading the live DOM would see a previous page's Article alongside the current one.
 
 So in the browser, a block is `application/ld+json` only while React shows it, and
-`text/x-ldgraph-inactive` (which deliberately doesn't contain `ld+json`) otherwise:
+`text/x-jsonld-stitch-inactive` (which deliberately doesn't contain `ld+json`) otherwise:
 
 - The server renders an active block, so crawlers and the first paint see a plain data block.
 - Hydration keeps the server's attribute.

@@ -10,8 +10,8 @@
     "allowImportingTsExtensions": true,
     "types": ["node"],
     "paths": {
-      "ldgraph": ["../../src/index.ts"],
-      "ldgraph/check": ["../../src/check.ts"]
+      "jsonld-stitch": ["../../src/index.ts"],
+      "jsonld-stitch/check": ["../../src/check.ts"]
     }
   },
   "files": ["types.test.ts"]

@@ -1,5 +1,5 @@
 import type { WebPage } from "schema-dts";
-import { JsonLd, ref } from "ldgraph";
+import { JsonLd, ref } from "jsonld-stitch";
 import { SITE, website } from "@/lib/graph";
 
 export default function Home() {

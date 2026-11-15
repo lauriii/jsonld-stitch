@@ -1,6 +1,6 @@
 // Site-wide nodes. A plain module: layouts and pages both import it, so they share ids, not state.
 import type { Blog, Organization, WebSite } from "schema-dts";
-import { ref } from "ldgraph";
+import { ref } from "jsonld-stitch";
 
 // Absolute ids: "#organization" on /a and on /b would be two different nodes.
 export const SITE = "https://example.com";

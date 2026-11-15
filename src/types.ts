@@ -7,7 +7,7 @@ type Open = { readonly [key: string]: unknown };
 
 /**
  * A JSON-LD node object: it has a `@type`, or an `@id` that adds properties to a node defined
- * elsewhere (`{ "@id": org["@id"], logo }`). ldgraph does not type the vocabulary; schema-dts does.
+ * elsewhere (`{ "@id": org["@id"], logo }`). jsonld-stitch does not type the vocabulary; schema-dts does.
  * `Typed` and `Linked` carry no index signature, so values annotated with an interface (schema-dts's
  * `Article`, `WithContext<Product>`) match them; the `Open` variants take any object literal.
  */

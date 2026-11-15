@@ -1,5 +1,5 @@
 {
-  "name": "ldgraph",
+  "name": "jsonld-stitch",
   "version": "0.1.0",
   "description": "JSON-LD for Next.js and React Server Components: safe, typed with schema-dts, one linked graph across layouts and pages, zero dependencies.",
   "keywords": [
@@ -16,10 +16,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lauriii/ldgraph.git"
+    "url": "git+https://github.com/lauriii/jsonld-stitch.git"
   },
-  "homepage": "https://github.com/lauriii/ldgraph#readme",
-  "bugs": "https://github.com/lauriii/ldgraph/issues",
+  "homepage": "https://github.com/lauriii/jsonld-stitch#readme",
+  "bugs": "https://github.com/lauriii/jsonld-stitch/issues",
   "type": "module",
   "sideEffects": false,
   "exports": {

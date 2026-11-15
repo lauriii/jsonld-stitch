@@ -1,10 +1,10 @@
-// React 18.3 turns string children of <script> into HTML entities, which corrupts JSON-LD. ldgraph
+// React 18.3 turns string children of <script> into HTML entities, which corrupts JSON-LD. jsonld-stitch
 // renders through dangerouslySetInnerHTML, so the output must be byte-identical to React 19's.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createElement, version } from "react";
 import { renderToStaticMarkup, renderToString } from "react-dom/server";
-import { JsonLd, ref, serialize } from "ldgraph";
+import { JsonLd, ref, serialize } from "jsonld-stitch";
 
 const SITE = "https://example.com";
 const org = { "@type": "Organization", "@id": `${SITE}/#organization`, name: "</script><!-- & \u2028 ]]>" };

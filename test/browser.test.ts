@@ -13,7 +13,7 @@ import { JsonLd } from "../src/index.ts";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const GRAPH = { "@context": "https://schema.org", "@type": "Thing", "@id": "https://example.com/#t", name: "tab" };
 const ACTIVE = "application/ld+json";
-const INACTIVE = "text/x-ldgraph-inactive";
+const INACTIVE = "text/x-jsonld-stitch-inactive";
 
 const ENTRY = `
 import { createElement as h, Activity, Suspense, use, useState } from "react";

@@ -74,10 +74,10 @@ describe("dev warnings", () => {
     // A conflict inside one block keeps the first value.
     expect(JSON.parse(html.slice(html.indexOf(">") + 1, -"</script>".length))["@graph"][0].name).toBe("A");
     expect(lines()).toEqual([
-      "[ldgraph] relative-id: #widget (use an absolute @id such as https://your.site/page#name: a relative one is a different node on every URL)",
-      '[ldgraph] conflict: #widget name: "A" vs "B" (give the property one value: across blocks the page\'s graph holds both)',
-      "[ldgraph] product: #widget needs offers, review or aggregateRating",
-      "[ldgraph] breadcrumb: BreadcrumbList item 1 needs an item URL",
+      "[jsonld-stitch] relative-id: #widget (use an absolute @id such as https://your.site/page#name: a relative one is a different node on every URL)",
+      '[jsonld-stitch] conflict: #widget name: "A" vs "B" (give the property one value: across blocks the page\'s graph holds both)',
+      "[jsonld-stitch] product: #widget needs offers, review or aggregateRating",
+      "[jsonld-stitch] breadcrumb: BreadcrumbList item 1 needs an item URL",
     ]);
   });
 
@@ -91,7 +91,7 @@ describe("dev warnings", () => {
       render(bad); // the same page rendering again: quiet
       vi.advanceTimersByTime(3_000);
       render(bad); // fixed and reintroduced, or a later visit: warns again
-      expect(lines().filter((l: string) => l.startsWith("[ldgraph] relative-id: #again "))).toHaveLength(2);
+      expect(lines().filter((l: string) => l.startsWith("[jsonld-stitch] relative-id: #again "))).toHaveLength(2);
     } finally {
       vi.useRealTimers();
     }
@@ -101,7 +101,7 @@ describe("dev warnings", () => {
     process.env.NODE_ENV = "development";
     const node = { "@type": "Thing" } as unknown as { "@id": string };
     expect(ref(node)).toEqual({ "@id": undefined });
-    expect(warn.mock.calls).toEqual([["[ldgraph] ref() needs a node with an @id, but got:", node]]);
+    expect(warn.mock.calls).toEqual([["[jsonld-stitch] ref() needs a node with an @id, but got:", node]]);
   });
 
   it("is silent in production", () => {

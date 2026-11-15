@@ -1,10 +1,10 @@
-# ldgraph
+# jsonld-stitch
 
 Safe JSON-LD for Next.js and React Server Components: each layout and page adds its own nodes, and
 together they form one linked graph. Zero dependencies.
 
 ```sh
-npm i ldgraph
+npm i jsonld-stitch
 npm i -D schema-dts   # optional, recommended: types for the schema.org vocabulary
 ```
 
@@ -13,14 +13,14 @@ Next.js's Metadata API has no field for structured data. Its docs tell you to ha
 safe, but it leaves three things to you:
 
 - **Escaping, on every block.** The `.replace` is easy to forget or to get subtly wrong (replacing only
-  `</script>` misses `</script >`), and then a CMS headline can end the script element early. ldgraph
+  `</script>` misses `</script >`), and then a CMS headline can end the script element early. jsonld-stitch
   always escapes, and escapes the same characters Next.js does for its own inline data.
-- **Typing.** Nothing checks that `nmae` should have been `name`. ldgraph is built to work with
+- **Typing.** Nothing checks that `nmae` should have been `name`. jsonld-stitch is built to work with
   [schema-dts](https://github.com/google/schema-dts), which types the vocabulary.
 - **Composition.** The root layout knows the Organization and WebSite, a section layout knows the Blog,
   and the page knows the Article. A layout can't see its children's data, so nobody can write "the" graph.
 
-ldgraph is one component, one helper and one serializer, plus a `check()` for your tests.
+jsonld-stitch is one component, one helper and one serializer, plus a `check()` for your tests.
 
 ## 60-second usage
 
@@ -29,7 +29,7 @@ ldgraph is one component, one helper and one serializer, plus a `check()` for yo
 ```ts
 // lib/graph.ts
 import type { Organization, WebSite } from "schema-dts";
-import { ref } from "ldgraph";
+import { ref } from "jsonld-stitch";
 
 export const SITE = "https://example.com"; // absolute: "#org" on /a and on /b are different nodes
 
@@ -54,7 +54,7 @@ export const website = {
 
 ```tsx
 // app/layout.tsx
-import { JsonLd } from "ldgraph";
+import { JsonLd } from "jsonld-stitch";
 import { organization, website } from "@/lib/graph";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -74,7 +74,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
 ```tsx
 // app/blog/[slug]/page.tsx
 import type { BlogPosting, BreadcrumbList } from "schema-dts";
-import { JsonLd, ref } from "ldgraph";
+import { JsonLd, ref } from "jsonld-stitch";
 import { SITE, organization, website } from "@/lib/graph";
 import { getPost } from "@/lib/posts";
 
@@ -174,8 +174,8 @@ node twice is harmless.
 ## API
 
 ```ts
-import { JsonLd, ref, serialize, type Nodes, type Ref } from "ldgraph";
-import { check, type Issue, type Rule } from "ldgraph/check";
+import { JsonLd, ref, serialize, type Nodes, type Ref } from "jsonld-stitch";
+import { check, type Issue, type Rule } from "jsonld-stitch/check";
 ```
 
 ### `<JsonLd graph={nodes} />`
@@ -217,7 +217,7 @@ Values follow `JSON.stringify`: `null` is kept; `undefined`, functions and symbo
 and `URL` become strings; `NaN` and `Infinity` become `null`; a `Set` or `Map` becomes `{}`; and a
 `BigInt` or a cycle throws, failing the render like a hand-written `JSON.stringify` would.
 
-### `check(htmlOrDom)` from `ldgraph/check`
+### `check(htmlOrDom)` from `jsonld-stitch/check`
 
 Reads every active JSON-LD block on a page as one graph and returns a list of `Issue`s
 (`{ rule, message, id? }`), or `[]` for a clean page. Pass the HTML as a string (it is read the way a
@@ -228,7 +228,7 @@ browser reads it: comments, `<template>` content and the text of other scripts d
 
 `Nodes` is deliberately minimal: an object with a `@type` (or an `@id` that adds to a node defined
 elsewhere), a document, a falsy value, or an array of these. The vocabulary comes from
-[schema-dts](https://github.com/google/schema-dts), which ldgraph never imports. Both ways of using it work,
+[schema-dts](https://github.com/google/schema-dts), which jsonld-stitch never imports. Both ways of using it work,
 with schema-dts 1.x and 2.x:
 
 ```ts
@@ -248,7 +248,7 @@ Prefer `satisfies` for nodes you `ref()`: an annotated value's `@id` is optional
 `check()` runs every rule over a whole page. Use it in any test runner:
 
 ```ts
-import { check } from "ldgraph/check";
+import { check } from "jsonld-stitch/check";
 
 test("structured data is linked and valid", async () => {
   const html = await (await fetch("http://localhost:3000/blog/hello")).text();
@@ -260,29 +260,29 @@ In Playwright, `check(await page.content())` checks the live DOM after navigatio
 
 ## Dev warnings
 
-In development, ldgraph checks each block in the terminal (the rules that need one block) and the whole
+In development, jsonld-stitch checks each block in the terminal (the rules that need one block) and the whole
 page in the browser console (the rules that need every block). For example, in the browser:
-`[ldgraph] dangling-ref: https://example.com/#org (from https://example.com/blog/x#article.publisher); did you mean https://example.com/#organization?`.
+`[jsonld-stitch] dangling-ref: https://example.com/#org (from https://example.com/blog/x#article.publisher); did you mean https://example.com/#organization?`.
 Each rule runs in one place only, and an issue is printed again only after it has been gone for a
 moment. Production builds contain none of this code.
 
 | Rule | What it means | Where |
 | --- | --- | --- |
 | `relative-id` | An `@id` without a scheme (`#org`, `/about`). `_:` blank nodes are fine. | terminal |
-| `conflict` | Two definitions of one `@id` give a property different values. In one block ldgraph keeps the first; across blocks the page's graph holds both. | terminal (one block), browser (across blocks) |
+| `conflict` | Two definitions of one `@id` give a property different values. In one block jsonld-stitch keeps the first; across blocks the page's graph holds both. | terminal (one block), browser (across blocks) |
 | `product` | A Product needs `name` and one of `offers`, `review` or `aggregateRating` (Google's product snippet minimum). | terminal |
 | `breadcrumb` | Every ListItem needs `position` and `name`; every one but the last needs `item`. | terminal |
 | `dangling-ref` | A `{ "@id" }` reference to a node that no block on the page defines, on a site that does define nodes here. Links to other sites (Wikidata, …) are fine. | browser |
 | `missing-type` | A node with no `@type` after reading the whole page, or a node with neither `@id` nor `@type`. | browser |
-| `missing-context` | A block with no `@context` (hand-written or third-party blocks; ldgraph's always have one). | browser |
+| `missing-context` | A block with no `@context` (hand-written or third-party blocks; jsonld-stitch's always have one). | browser |
 | `invalid-json` | A block that isn't valid JSON. | browser |
 
-ldgraph doesn't validate the vocabulary or try to be a Rich Results validator: that changes too often,
+jsonld-stitch doesn't validate the vocabulary or try to be a Rich Results validator: that changes too often,
 and [Google's Rich Results Test](https://search.google.com/test/rich-results) is the authority.
 
 ## Security
 
-ldgraph escapes `<`, `>`, `&`, U+2028 and U+2029 as `\u003c`-style escapes, the set Next.js uses for its
+jsonld-stitch escapes `<`, `>`, `&`, U+2028 and U+2029 as `\u003c`-style escapes, the set Next.js uses for its
 own inline data. They can only occur inside JSON strings, so the escaping is both safe (no `<` reaches
 the HTML, so no end tag, comment or CDATA marker can form) and lossless (`JSON.parse` gives back your
 data). Details, and what other approaches get wrong: [docs/security.md](docs/security.md).
@@ -314,7 +314,7 @@ data). Details, and what other approaches get wrong: [docs/security.md](docs/sec
   So until the Rich Results Test confirms it, keep the properties a rich result needs on the page's
   own node (see [Rules of thumb](#rules-of-thumb)), or use one block per page for pages that need
   rich results. The pages to paste in are in [docs/verification/pages](docs/verification/pages).
-- FAQ and HowTo markup no longer produces rich results for most sites, so ldgraph has no special support
+- FAQ and HowTo markup no longer produces rich results for most sites, so jsonld-stitch has no special support
   for them.
 
 ## Migrating from a hand-written `<script>`

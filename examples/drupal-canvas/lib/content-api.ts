@@ -1,7 +1,7 @@
 // The Drupal Canvas content API: GET {base}/canvas/content-api?requestUri=/path returns the page's
 // component tree plus its <head>: title, meta, link and script (the SEO module's JSON-LD graph).
 
-import type { Nodes } from "ldgraph";
+import type { Nodes } from "jsonld-stitch";
 
 export type HeadMeta = { name?: string; property?: string; content: string };
 export type HeadLink = { rel: string; href: string; hreflang?: string };

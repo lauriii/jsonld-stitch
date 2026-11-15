@@ -32,7 +32,7 @@ First release.
   nodes that share an `@id` and a `@context`, and escapes `< > & U+2028 U+2029` losslessly.
 - `Nodes` accepts plain object literals and values annotated with schema-dts types
   (`WithContext<Product>`, `Article`), and the falsy results of `cond && node` for any `cond`.
-- `check(html | dom)` from `ldgraph/check`: whole-page rules (`invalid-json`, `missing-context`,
+- `check(html | dom)` from `jsonld-stitch/check`: whole-page rules (`invalid-json`, `missing-context`,
   `missing-type`, `relative-id`, `dangling-ref`, `conflict`, `product`, `breadcrumb`) for tests. HTML
   is read the way a browser tokenizes it.
 - Dev-only warnings for the same rules, split between server and browser so none is reported twice,
