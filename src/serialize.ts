@@ -16,17 +16,24 @@ const escape = (c: string): string => "\\u" + c.charCodeAt(0).toString(16).padSt
  * (`null`, `undefined`, `false`, `""`, `0`), and removes a `@context` that is just schema.org. A
  * document's other `@context` moves down onto its nodes, so no context is ever lost. An object with
  * a `@graph` and properties of its own stays a node, before its graph's nodes. Never mutates its input.
+ * Truthy non-objects (a string, `true`, a number) are dropped too, and collected in `skipped` if given.
  */
-export function flatten(graph: unknown, context?: unknown, out: Obj[] = []): Obj[] {
-  if (Array.isArray(graph)) {
-    for (const item of graph) flatten(item, context, out);
-  } else if (isObj(graph)) {
-    const { "@context": own, "@graph": inner, ...node } = graph;
-    const ctx = own ?? context;
-    if (inner === undefined || Object.keys(node).some((k) => k !== "@id" && node[k] !== undefined))
-      out.push(ctx === undefined || isSchemaOrg(ctx) ? node : { "@context": ctx, ...node });
-    flatten(inner, ctx, out);
-  }
+export function flatten(graph: unknown, skipped?: unknown[]): Obj[] {
+  const out: Obj[] = [];
+  const walk = (value: unknown, context: unknown): void => {
+    if (Array.isArray(value)) {
+      for (const item of value) walk(item, context);
+    } else if (isObj(value)) {
+      const { "@context": own, "@graph": inner, ...node } = value;
+      const ctx = own ?? context;
+      if (inner === undefined || Object.keys(node).some((k) => k !== "@id" && node[k] !== undefined))
+        out.push(ctx === undefined || isSchemaOrg(ctx) ? node : { "@context": ctx, ...node });
+      walk(inner, ctx);
+    } else if (value) {
+      skipped?.push(value);
+    }
+  };
+  walk(graph, undefined);
   return out;
 }
 

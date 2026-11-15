@@ -183,11 +183,27 @@ const seen = new Map<string, number>();
  * warn once, and an issue that is fixed and comes back warns again.
  */
 export function report(issues: readonly Issue[]): void {
-  const now = performance.now(); // not Date.now(), which Next flags while prerendering
-  if (seen.size > 500) seen.clear();
   for (const { rule, message } of issues) {
     const line = `[jsonld-stitch] ${rule}: ${message}`;
-    if (!(now - (seen.get(line) ?? -Infinity) < 2000)) console.warn(HINTS[rule] ? `${line} (${HINTS[rule]})` : line);
-    seen.set(line, now);
+    warn(line, HINTS[rule] ? `${line} (${HINTS[rule]})` : line);
   }
+}
+
+/**
+ * Warns, like `report`, about the values `flatten` skipped because they are not nodes. A JSON-typed
+ * document (a CMS's) may hold anything, and a string or `true` in it should not vanish silently.
+ */
+export function reportSkipped(values: readonly unknown[]): void {
+  if (!values.length) return;
+  const what = values.length === 1 ? "a value that is" : `${values.length} values that are`;
+  // JSON.stringify throws on a bigint.
+  const line = `[jsonld-stitch] graph holds ${what} not a node, skipped: ${values.map((v) => (typeof v === "bigint" ? `${v}n` : short(v))).join(", ")}`;
+  warn(line, `${line} (graph takes node objects, JSON-LD documents, arrays of these, and falsy values)`);
+}
+
+function warn(line: string, text: string): void {
+  const now = performance.now(); // not Date.now(), which Next flags while prerendering
+  if (seen.size > 500) seen.clear();
+  if (!(now - (seen.get(line) ?? -Infinity) < 2000)) console.warn(text);
+  seen.set(line, now);
 }

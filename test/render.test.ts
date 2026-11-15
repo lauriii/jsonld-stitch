@@ -104,9 +104,29 @@ describe("dev warnings", () => {
     expect(warn.mock.calls).toEqual([["[jsonld-stitch] ref() needs a node with an @id, but got:", node]]);
   });
 
+  it("skips what isn't a node in a JSON-typed graph, warns once about it, and renders the rest", () => {
+    process.env.NODE_ENV = "development";
+    const node = { "@type": "Thing", "@id": `${SITE}/#thing` };
+    const junk = ["https://example.com/", 42, true, 7n] as unknown as Nodes;
+    expect(render(junk)).toBe("");
+    expect(render([node, junk])).toBe(expected(node));
+    render(junk); // the same page rendering again: quiet
+    expect(lines()).toEqual([
+      '[jsonld-stitch] graph holds 4 values that are not a node, skipped: "https://example.com/", 42, true, 7n (graph takes node objects, JSON-LD documents, arrays of these, and falsy values)',
+    ]);
+    warn.mockClear();
+    // A falsy value is skipped quietly: cond && node is meant to give one.
+    expect(render([null, undefined, false, "", 0, Number.NaN, 0n] as unknown as Nodes)).toBe("");
+    expect(render({ "@graph": "not a graph" } as unknown as Nodes)).toBe("");
+    expect(lines()).toEqual([
+      '[jsonld-stitch] graph holds a value that is not a node, skipped: "not a graph" (graph takes node objects, JSON-LD documents, arrays of these, and falsy values)',
+    ]);
+  });
+
   it("is silent in production", () => {
     process.env.NODE_ENV = "production";
     render([{ "@type": "Product", "@id": "#silent" }]);
+    render(["not a node", true] as unknown as Nodes);
     ref({} as { "@id": string });
     expect(warn).not.toHaveBeenCalled();
   });

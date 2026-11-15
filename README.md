@@ -174,7 +174,7 @@ node twice is harmless.
 ## API
 
 ```ts
-import { JsonLd, ref, serialize, type Nodes, type Ref } from "jsonld-stitch";
+import { JsonLd, ref, serialize, type JsonLdDocument, type Nodes, type Ref } from "jsonld-stitch";
 import { check, type Issue, type Rule } from "jsonld-stitch/check";
 ```
 
@@ -185,7 +185,11 @@ An empty graph renders nothing. `graph` takes:
 
 - a node, or an array of nodes, nested as deep as you like;
 - a falsy value (`null`, `undefined`, `false`, `""`, `0`), which is skipped, so `cond && node` works;
-- a whole JSON-LD document `{ "@context", "@graph" }`, for example from a CMS.
+- a whole JSON-LD document `{ "@context", "@graph" }`;
+- any JSON-LD document a CMS returns, typed as plain JSON (see [CMS JSON-LD](#pages-router-cms-json-ld-other-react-apps)).
+
+Anything else that reaches it at runtime, such as a string inside a CMS's array, is skipped, with a dev
+warning.
 
 It works in Server Components (it serializes on the server and sends only the string to a ~0.5 kB
 client component), in Client Components, and in the Pages Router. In the browser a block is
@@ -204,7 +208,7 @@ type error. If the node's `@id` has a literal type (`` `${SITE}/#org` as const `
 The string `JsonLd` renders, for anything outside React: route handlers, feeds, other renderers, tests.
 It's pure and never logs. In order, it:
 
-1. flattens arrays and `@graph` documents and drops falsy values (an object with a `@graph` and
+1. flattens arrays and `@graph` documents and drops falsy values and other non-objects (an object with a `@graph` and
    properties of its own is kept as a node too);
 2. removes a node's `@context` when it is just schema.org (`http`/`https`, with or without `/`), and keeps
    any other;
@@ -242,6 +246,12 @@ const jsonLd: WithContext<Product> = { "@context": "https://schema.org", "@type"
 
 Prefer `satisfies` for nodes you `ref()`: an annotated value's `@id` is optional in schema-dts, so
 `ref()` rejects it.
+
+`JsonLdDocument` is the part of `Nodes` for JSON-LD you didn't write: an object or an array typed only as
+JSON (`{ [key: string]: JsonValue }`, `JsonValue[]`, `Record<string, unknown>`), as a CMS SDK or a
+fetch wrapper types it. It matches only values whose type is an index signature, so it loosens nothing
+for nodes you write: an object literal or variable with named properties is still checked as a node,
+and `{ name: "x" }` is still an error. A value typed `unknown` must be typed as JSON first.
 
 ## Testing your site
 
@@ -291,9 +301,21 @@ data). Details, and what other approaches get wrong: [docs/security.md](docs/sec
 
 - **Pages Router**: the same component works in `pages/*.tsx` on React 18.3 or 19. Each page is the
   whole tree, so pass the whole graph from the page (one block).
-- **CMS or headless JSON-LD**: `graph={await res.json()}` accepts a whole `{ "@context", "@graph" }`
-  document and merges it with your own nodes. A CMS `@context` other than schema.org is kept, on its
-  nodes, and nodes under different contexts are never merged.
+- **CMS or headless JSON-LD**: pass the CMS's document as is, typed the way its SDK types JSON. Any
+  JSON-LD document works: `{ "@context", "@graph" }`, a single node with or without `@type`, or an
+  array of these. No cast is needed:
+
+  ```tsx
+  // How a CMS SDK types a head.script entry: its JSON-LD is plain JSON.
+  type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+  type HeadScript = { type: string; textContent: JsonValue[] | { [key: string]: JsonValue } };
+
+  const scripts: HeadScript[] = page.head.script.filter((s) => s.type === "application/ld+json");
+  return scripts.map((script, i) => <JsonLd key={i} graph={script.textContent} />);
+  ```
+
+  It merges with your own nodes too (`graph={[organization, script.textContent]}`). A CMS `@context`
+  other than schema.org is kept, on its nodes, and nodes under different contexts are never merged.
   [`examples/drupal-canvas`](examples/drupal-canvas) renders a Drupal Canvas site's head, JSON-LD
   included, from its content API, with a script that checks the served graph against the API's.
 - **Other React apps**: `JsonLd` is plain React and should work in any RSC host (React Router, Waku) and

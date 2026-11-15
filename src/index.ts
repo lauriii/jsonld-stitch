@@ -1,11 +1,11 @@
 import { createElement, type ReactElement } from "react";
-import { lint, report, SERVER } from "./lint.js";
+import { lint, report, reportSkipped, SERVER } from "./lint.js";
 import { Script } from "./script.js";
 import { flatten, stringify } from "./serialize.js";
 import type { Nodes, Ref } from "./types.js";
 
 export { serialize } from "./serialize.js";
-export type { Nodes, Ref } from "./types.js";
+export type { JsonLdDocument, Nodes, Ref } from "./types.js";
 
 /**
  * Renders one `<script type="application/ld+json">` holding `graph`, merged by `@id` and safely
@@ -16,12 +16,15 @@ export function JsonLd({
   graph,
 }: {
   /**
-   * The nodes to render: a node, a whole `{ "@context", "@graph" }` document (e.g. from a CMS), a
-   * falsy value (skipped, so `cond && node` works), or an array of these, nested freely.
+   * The nodes to render: a node, a whole `{ "@context", "@graph" }` document, a CMS's JSON-LD as
+   * its SDK types it (`JsonValue[] | { [key: string]: JsonValue }`), a falsy value (skipped, so
+   * `cond && node` works), or an array of these, nested freely.
    */
   graph: Nodes;
 }): ReactElement | null {
-  const nodes = flatten(graph);
+  const skipped: unknown[] = [];
+  const nodes = flatten(graph, skipped);
+  if (process.env.NODE_ENV !== "production") reportSkipped(skipped);
   if (nodes.length === 0) return null;
   const json = stringify(nodes);
   // Dev only: rules that need just this block (every node, duplicates included, so conflicts show). Whole-page

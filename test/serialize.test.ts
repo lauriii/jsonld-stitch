@@ -86,6 +86,19 @@ describe("serialize: structure", () => {
     expect(graphOf([doc, c])).toEqual([a, b, c]);
   });
 
+  it("takes a CMS's JSON-LD as its SDK types it, in every shape, and drops non-objects in it", () => {
+    type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+    const docs: (JsonValue[] | { [key: string]: JsonValue })[] = [
+      { "@context": "https://schema.org", "@graph": [a] },
+      { "@context": "https://schema.org", ...b },
+      { "@id": a["@id"], logo: "https://example.com/logo.png" },
+      [{ "@context": "https://schema.org", ...c }, "https://example.com/", 42, true, null],
+    ];
+    expect(graphOf(docs)).toEqual([{ ...a, logo: "https://example.com/logo.png" }, b, c]);
+    // serialize() is pure: no warning about what it dropped (that is <JsonLd>'s, in dev).
+    expect(graphOf(["x", 1, true] as unknown as Nodes)).toEqual([]);
+  });
+
   it("strips a @context that is just schema.org", () => {
     for (const ctx of ["https://schema.org", "https://schema.org/", "http://schema.org", "http://schema.org/"]) {
       expect(graphOf({ "@context": ctx, ...c })).toEqual([c]);

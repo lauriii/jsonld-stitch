@@ -5,9 +5,11 @@ content API. Every path is passed to the API, and the page renders what the API'
 
 - `head.title`, `head.meta` and `head.link` as React 19 `<title>`, `<meta>` and `<link>` elements
   (React hoists them into `<head>`);
-- each `head.script` of type `application/ld+json` with `<JsonLd graph={textContent} />`. The CMS's
-  `{ "@context", "@graph" }` document is passed as is: jsonld-stitch escapes it and renders it, and the
-  served block parses back to exactly the API's graph.
+- each `head.script` of type `application/ld+json` with `<JsonLd graph={script.textContent} />`. The
+  CMS's `{ "@context", "@graph" }` document is passed as is: jsonld-stitch escapes it and renders it,
+  and the served block parses back to exactly the API's graph. `lib/content-api.ts` types the
+  response the way the Canvas SDK does (`textContent: JsonValue[] | { [key: string]: JsonValue }`), and
+  that type-checks against `graph` without a cast.
 
 Rendering the page's components is out of scope; the page shows its title only.
 

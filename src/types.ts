@@ -16,14 +16,35 @@ export type NodeObject = Typed | Linked | (Typed & Open) | (Linked & Open);
 /** A reference to a node by its `@id`. Create one with `ref(node)`. */
 export type Ref<Id extends string = string> = { readonly "@id": Id };
 
+declare const untyped: unique symbol;
+
+/**
+ * A JSON object that is typed only by an index signature, the way an SDK or a fetch wrapper types
+ * parsed JSON: `{ [key: string]: JsonValue }`, `Record<string, unknown>`. Its one optional property
+ * is a symbol that no value ever has, so an object literal or a variable with named properties never
+ * matches it (TypeScript's weak type check): authored nodes are still checked as `NodeObject`s.
+ */
+type JsonObject = { readonly [untyped]?: never };
+type JsonValue = string | number | boolean | null | readonly JsonValue[] | JsonObject;
+
+/**
+ * A JSON-LD document as a CMS or its SDK returns it, typed as plain JSON: an object (`{ "@context",
+ * "@graph" }`, a single node, a node with just an `@id`) or an array. A value typed
+ * `JsonValue[] | { [key: string]: JsonValue }`, `Record<string, unknown>` or `any` is one. Only values
+ * typed by an index signature match: an object literal is a node, and is checked as one.
+ */
+export type JsonLdDocument = JsonObject | readonly JsonValue[];
+
 /**
  * What `<JsonLd graph>` and `serialize()` accept: a node, a whole JSON-LD document
- * (`{ "@context", "@graph" }`, e.g. from a CMS), a falsy value (so `cond && node` works whether
- * `cond` is a boolean, a string or a number) or an array of any of these, nested freely.
+ * (`{ "@context", "@graph" }`), a CMS's JSON-LD typed as plain JSON (`JsonLdDocument`), a falsy value
+ * (so `cond && node` works whether `cond` is a boolean, a string or a number) or an array of any of
+ * these, nested freely. Anything else found at runtime (a string, `true`) is skipped, with a dev warning.
  */
 export type Nodes =
   | NodeObject
   | { readonly "@context"?: Context; readonly "@graph": Nodes }
+  | JsonLdDocument
   | null
   | undefined
   | false

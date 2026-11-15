@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { JsonLd } from "jsonld-stitch";
-import { API_BASE, getPage, jsonLdDocuments } from "@/lib/content-api";
+import { API_BASE, getPage, jsonLdScripts } from "@/lib/content-api";
 
 // Every path is passed through to the content API. The CMS owns the head, so this page renders
 // the API's title, meta and link tags as React 19 elements (React hoists them into <head>) and each
@@ -25,8 +25,8 @@ export default async function CanvasPage({ params }: PageProps<"/[[...slug]]">) 
       {head.title ? <title>{head.title}</title> : null}
       {head.meta?.map((m, i) => <meta key={i} {...m} />)}
       {head.link?.map(({ hreflang, ...l }, i) => <link key={i} {...l} hrefLang={hreflang} />)}
-      {jsonLdDocuments(page).map((doc, i) => (
-        <JsonLd key={i} graph={doc} />
+      {jsonLdScripts(page).map((script, i) => (
+        <JsonLd key={i} graph={script.textContent} />
       ))}
       <h1>{page.context?.page?.pageTitle ?? head.title}</h1>
     </main>

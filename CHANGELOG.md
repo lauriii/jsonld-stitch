@@ -6,7 +6,23 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `<JsonLd graph>` and `serialize()` accept a CMS's JSON-LD document as is, typed the way an SDK types
+  parsed JSON: `JsonValue[] | { [key: string]: JsonValue }` (the Drupal Canvas SDK's type for
+  `head.script[].textContent`), `Record<string, unknown>`, an array of these, and every JSON-LD shape
+  (`@context` + `@graph`, a single node, an `@id`-only node). Before, `Nodes` required a top-level
+  `@type`, `@id` or `@graph`, so `<JsonLd graph={script.textContent} />` failed to type-check. Authored
+  nodes are checked exactly as before: only index-signature types match the new member.
+- `examples/drupal-canvas` types the content API response the way the Canvas SDK does, instead of
+  letting `JSON.parse`'s `any` hide the mismatch, and passes `textContent` straight to `<JsonLd>`.
+
 ### Added
+
+- `JsonLdDocument`: the type of a JSON-LD document typed as plain JSON, now part of `Nodes`.
+- A dev warning when `<JsonLd>` skips a value that is not a node, such as a string or `true` inside a
+  CMS's array. `serialize()` still drops such values silently, and falsy values are still skipped
+  without a warning.
 
 - `examples/drupal-canvas`: a Next.js front end that renders a Drupal Canvas content API page's head
   and JSON-LD graph with `<JsonLd>`, and a `verify` script that checks the served graph against the
