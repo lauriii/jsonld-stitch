@@ -6,12 +6,13 @@
 // Env: NEXT_VERSION installs another Next into the example (e.g. 15.5); CHROMIUM_PATH points
 // playwright-core at a Chromium binary (otherwise run `npx playwright-core install chromium`).
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
-import { readdirSync, readFileSync, rmSync } from "node:fs";
+import { readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium, type Browser, type Page } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Issue } from "../src/check.ts";
+import { blocksIn as ldBlocks, FIXTURES } from "./jsonld-proof.ts";
 import { XSS } from "../examples/app-router/lib/data.ts";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -161,6 +162,15 @@ describe.each(modes)("next build + start (%s)", (mode) => {
       if (ROUTES[path]!.length > 1) expect(blocks[0]!.index).toBeLessThan(html.indexOf("</head>"));
     });
   }
+
+  // test/jsonld.test.ts runs the JSON-LD processor over saved copies of these pages: they must still
+  // be what the build serves. LDGRAPH_UPDATE_FIXTURES=1 saves them afresh (from the first mode).
+  it.each(Object.keys(FIXTURES))("serves the blocks saved in the JSON-LD fixture for %s", async (path) => {
+    const html = await fetchHtml(server.url + path, UAS.googlebot);
+    const file = join(ROOT, "test", "fixtures", "app-router", FIXTURES[path]!);
+    if (process.env.LDGRAPH_UPDATE_FIXTURES === "1" && mode === modes[0]) writeFileSync(file, html);
+    expect(ldBlocks(html)).toEqual(ldBlocks(readFileSync(file, "utf8")));
+  });
 
   it("round-trips the XSS headline, and no payload reaches the HTML", async () => {
     const html = await fetchHtml(`${server.url}/xss`, UAS.browser);
