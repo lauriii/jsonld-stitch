@@ -11,6 +11,11 @@ All notable changes to this project are documented here. The format follows
 - `examples/drupal-canvas`: a Next.js front end that renders a Drupal Canvas content API page's head
   and JSON-LD graph with `<JsonLd>`, and a `verify` script that checks the served graph against the
   API's.
+- `test/jsonld.test.ts`: checks with jsonld.js, the JSON-LD reference processor, that the blocks the
+  example app serves form the same dataset as the same nodes in one block.
+- `docs/verification.md`: the evidence so far. Google's Schema Markup Validator joins a Product split
+  across blocks. The Rich Results Test has not been run on split blocks yet, so the README still
+  advises keeping rich-result properties on the page's own node.
 
 ## [0.1.0]
 

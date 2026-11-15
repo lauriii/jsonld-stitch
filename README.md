@@ -128,9 +128,21 @@ Nested layouts do the same: `app/blog/layout.tsx` renders `<JsonLd graph={blog} 
 ## How composition works
 
 Every layout and page renders its **own** block. The blocks link to each other by absolute `@id`, and
-JSON-LD 1.1 (§7, "Embedding JSON-LD in HTML documents") says a processor reads every
-`application/ld+json` block on a page into **one** dataset. So the root's Organization, the section's
-Blog and the page's BlogPosting form one graph, even though React rendered them in three places.
+JSON-LD 1.1 (§7.3, "Embedding JSON-LD in HTML documents") describes the `application/ld+json` blocks
+on a page as **one** dataset. Read that way, the root's Organization, the section's Blog and the
+page's BlogPosting form one graph, even though React rendered them in three places.
+
+What has been checked, and what hasn't ([details](docs/verification.md)):
+
+- **The JSON-LD reference processor** (jsonld.js, in `npm test`): merging the blocks gives exactly
+  the triples of the same nodes in one block. The literal API algorithm (`extractAllScripts`) keeps
+  each block in its own named graph, so a consumer that reads only the default graph sees none.
+- **Google's Schema Markup Validator** joins a Product split across two blocks: a second block adding
+  `offers` and `aggregateRating` to the same `@id`, an Offer pointing back with `itemOffered`, and an
+  `offers` ref to an Offer in the other block all gave one Product with 0 errors, like the one-block
+  control. Article, breadcrumb and Event splits have not been run.
+- **Google's Rich Results Test**, which decides rich result eligibility, has **not** been run on
+  split blocks yet.
 
 ```
 <head>  {"@graph":[Organization #organization, WebSite #website]}          ← root layout
@@ -149,8 +161,9 @@ node twice is harmless.
 - **Use absolute `@id`s** with a hash: `https://example.com/blog/x#article`. A relative `#article`
   resolves against whatever URL the page was fetched from.
 - **Keep the properties a rich result needs on the page's own node.** Use refs for site relationships
-  (`publisher`, `isPartOf`, `brand`). Whether Google joins `@id`s *across* script blocks is not yet
-  verified (see [Google notes](#google-notes)); following this rule keeps the page eligible either way.
+  (`publisher`, `isPartOf`, `brand`). Google's Schema Markup Validator joins a split Product, but the
+  Rich Results Test hasn't been checked on split blocks (see [Google notes](#google-notes)), so
+  following this rule keeps the page eligible either way.
 - **Render the block where the data is ready.** Inside `<Suspense>` is fine: the block streams in with
   its content.
 - **`<head>` or `<body>`** are both fine. A root layout can render into `<head>`.
@@ -290,11 +303,17 @@ data). Details, and what other approaches get wrong: [docs/security.md](docs/sec
 
 - Google's [Rich Results Test](https://search.google.com/test/rich-results) is the authority. Paste a
   page's HTML into its Code tab to test without deploying.
-- Google documents linking items with `@id`, but none of its examples spans two script blocks. Whether
-  it joins nodes across blocks is the one open question; the result will be recorded in
-  [docs/verification.md](docs/verification.md). Until then, keep rich-result properties on the page's
-  own node (see [Rules of thumb](#rules-of-thumb)), or use one block per page for pages that need rich
-  results.
+- Google documents linking items with `@id`, but none of its examples spans two script blocks. What
+  has been tested so far ([evidence](docs/verification.md), 2026-11-15):
+  - **Proven:** Google's [Schema Markup Validator](https://validator.schema.org/) joins a Product
+    split across two blocks, in all three ways tested (same `@id` in both blocks, `itemOffered` back
+    to the Product, `offers` ref to the Offer), with 0 errors and the same result as one block.
+  - **Not yet tested:** the Rich Results Test on any split page (it needs a signed-in browser), and
+    the validator on split Article, BreadcrumbList and Event pages.
+
+  So until the Rich Results Test confirms it, keep the properties a rich result needs on the page's
+  own node (see [Rules of thumb](#rules-of-thumb)), or use one block per page for pages that need
+  rich results. The pages to paste in are in [docs/verification/pages](docs/verification/pages).
 - FAQ and HowTo markup no longer produces rich results for most sites, so ldgraph has no special support
   for them.
 

@@ -7,8 +7,10 @@ children, renders in parallel with them, and isn't re-rendered when you navigate
 Any collector either emits too early (in a layout) or misses the layouts (in the page), and on a client
 navigation the layouts' code doesn't run at all. That only shows up in production builds.
 
-Linked blocks have none of these problems: each one is correct on its own, and JSON-LD 1.1 §7 reads
-every `application/ld+json` block on a page into one dataset.
+Linked blocks have none of these problems: each one is correct on its own, and JSON-LD 1.1 §7.3
+describes the `application/ld+json` blocks on a page as one dataset. How far consumers actually join
+them (the reference processor, Google's validator, the Rich Results Test) is recorded in
+[verification.md](verification.md).
 
 ## Merging
 
