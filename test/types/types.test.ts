@@ -1,6 +1,6 @@
 // Type tests: compiled (never run) against schema-dts 1.x and 2.x with skipLibCheck off.
 // Every @ts-expect-error must be needed, or tsc fails.
-import type { Article, BreadcrumbList, Graph, Organization, Product, WebSite } from "schema-dts";
+import type { Article, BreadcrumbList, Graph, Organization, Product, Thing, WebSite, WithContext } from "schema-dts";
 import { JsonLd, ref, serialize, type Nodes, type Ref } from "ldgraph";
 import { check, type Issue, type Rule } from "ldgraph/check";
 
@@ -43,6 +43,8 @@ const crumbs = {
 
 // Everything a graph may hold: nodes, falsy values, nested arrays, partial nodes and whole documents.
 const cond = Math.random() > 0.5;
+declare const slug: string;
+declare const count: number;
 const graph: Nodes = [
   organization,
   website,
@@ -50,6 +52,8 @@ const graph: Nodes = [
   product,
   crumbs,
   cond && article,
+  slug && article,
+  count && article,
   [article, [null, undefined]],
   { "@id": organization["@id"], logo: `${SITE}/logo.png` },
   { "@context": "https://schema.org", "@graph": [organization] },
@@ -64,10 +68,21 @@ export const literal: Ref<"https://example.com/#organization"> = ref(pinned);
 export const wrong: Ref<"https://example.com/#website"> = ref(pinned);
 export const widened: Ref<string> = ref(organization);
 
-// A value annotated with a schema-dts type is rejected: those unions include `string`. Use `satisfies`.
+// Values annotated with schema-dts types work too, as the Next.js and schema-dts docs write them.
 const annotated: Article = article;
-// @ts-expect-error annotated, not satisfies
-serialize(annotated);
+const withContext: WithContext<Product> = { "@context": "https://schema.org", "@type": "Product", name: "P" };
+declare const thing: Thing;
+export const annotatedJson: string = serialize([annotated, withContext]);
+export const annotatedElement = JsonLd({ graph: withContext });
+// ...except a bare Thing, which may be a plain string (an IRI), not a node.
+// @ts-expect-error Thing includes string
+serialize(thing);
+// ...and ref(), which needs a known @id: schema-dts makes it optional.
+// @ts-expect-error @id may be undefined on an annotated value
+ref(annotated);
+
+// @ts-expect-error a @context must be an IRI, an object, null or an array of these
+serialize({ "@context": 42, "@type": "Thing" });
 
 // @ts-expect-error a node needs a @type or an @id
 serialize({ name: "x" });

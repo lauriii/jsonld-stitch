@@ -1,7 +1,7 @@
 # ldgraph
 
-Safe, typed JSON-LD for React Server Components: one linked graph across layouts and pages, zero
-dependencies.
+Safe JSON-LD for Next.js and React Server Components: each layout and page adds its own nodes, and
+together they form one linked graph. Zero dependencies.
 
 ```sh
 npm i ldgraph
@@ -9,17 +9,18 @@ npm i -D schema-dts   # optional, recommended: types for the schema.org vocabula
 ```
 
 Next.js's Metadata API has no field for structured data. Its docs tell you to hand-write a
-`<script type="application/ld+json">` with `JSON.stringify` and escape `<` yourself. That leaves three
-problems:
+`<script type="application/ld+json">` with `JSON.stringify(data).replace(/</g, "\\u003c")`. That is
+safe, but it leaves three things to you:
 
-- **Safety.** One missed character in a CMS headline (`</script >`, `<!--`) ends the script element
-  early. Escaping only `<` is enough for HTML but not for every consumer, and entity-escaping changes
-  the data.
-- **Typing.** Nothing checks that `nmae` should have been `name`.
+- **Escaping, on every block.** The `.replace` is easy to forget or to get subtly wrong (replacing only
+  `</script>` misses `</script >`), and then a CMS headline can end the script element early. ldgraph
+  always escapes, and escapes the same characters Next.js does for its own inline data.
+- **Typing.** Nothing checks that `nmae` should have been `name`. ldgraph is built to work with
+  [schema-dts](https://github.com/google/schema-dts), which types the vocabulary.
 - **Composition.** The root layout knows the Organization and WebSite, a section layout knows the Blog,
   and the page knows the Article. A layout can't see its children's data, so nobody can write "the" graph.
 
-ldgraph is one component, one helper and one serializer that solve those, plus a `check()` for your tests.
+ldgraph is one component, one helper and one serializer, plus a `check()` for your tests.
 
 ## 60-second usage
 
@@ -113,6 +114,14 @@ export default async function Post({ params }: PageProps<"/blog/[slug]">) {
 }
 ```
 
+```tsx
+// app/blog/[slug]/loading.tsx: with Cache Components (the create-next-app default), a page that
+// awaits params needs this or generateStaticParams, like any dynamic route, or `next build` fails.
+export default function Loading() {
+  return <p>Loading…</p>;
+}
+```
+
 Nested layouts do the same: `app/blog/layout.tsx` renders `<JsonLd graph={blog} />` with
 `isPartOf: ref(website)`. A complete app is in [`examples/app-router`](examples/app-router).
 
@@ -129,15 +138,11 @@ Blog and the page's BlogPosting form one graph, even though React rendered them 
         {"@graph":[BlogPosting #article → publisher #organization, …]}       ← page
 ```
 
-**Why not merge everything into one `<script>`?** A package can't do that correctly. A layout can't see
-its children, renders in parallel with them, and isn't re-rendered when you navigate between its
-children. Any collector either emits too early (in a layout) or misses the layouts (in the page), and on
-a client navigation the layouts' code doesn't run at all. That only shows up in production builds.
-Linked blocks have none of these problems: each one is correct on its own.
-
-**One block per page instead.** If you want it, render nothing in the root layout and pass the whole
-graph from the page: `graph={[organization, website, blog, article]}`. Nodes that share an `@id` are
-merged, so including a node twice is harmless.
+A package can't correctly merge everything into one `<script>`: layouts can't see their children and
+don't re-render on client navigation ([why](docs/design.md#why-linked-blocks-not-one-script)). If you
+want one block per page, render nothing in the root layout and pass the whole graph from the page:
+`graph={[organization, website, blog, article]}`. Nodes that share an `@id` are merged, so including a
+node twice is harmless.
 
 ### Rules of thumb
 
@@ -146,17 +151,17 @@ merged, so including a node twice is harmless.
 - **Keep the properties a rich result needs on the page's own node.** Use refs for site relationships
   (`publisher`, `isPartOf`, `brand`). Whether Google joins `@id`s *across* script blocks is not yet
   verified (see [Google notes](#google-notes)); following this rule keeps the page eligible either way.
-- **Render the block where the data is ready.** Inside `<Suspense>` is fine too: the block streams in
-  with its content.
+- **Render the block where the data is ready.** Inside `<Suspense>` is fine: the block streams in with
+  its content.
 - **`<head>` or `<body>`** are both fine. A root layout can render into `<head>`.
-- **Keep blocks lean.** Like anything rendered by a Server Component, the JSON appears twice in the
-  HTML: once in the block and once in the RSC payload.
-- **No CSP nonce needed.** A data block never runs, so script-src doesn't apply to it.
+- **Keep blocks lean.** Like anything a Server Component renders, the JSON appears twice in the HTML:
+  once in the block and once in the RSC payload.
+- **No CSP nonce needed.** A data block never runs, so `script-src` doesn't apply to it.
 
 ## API
 
 ```ts
-import { JsonLd, ref, serialize, type Node, type Nodes, type Ref } from "ldgraph";
+import { JsonLd, ref, serialize, type Nodes, type Ref } from "ldgraph";
 import { check, type Issue, type Rule } from "ldgraph/check";
 ```
 
@@ -166,11 +171,14 @@ Renders one `<script type="application/ld+json">{"@context":"https://schema.org"
 An empty graph renders nothing. `graph` takes:
 
 - a node, or an array of nodes, nested as deep as you like;
-- `null`, `undefined` or `false`, which are skipped, so `cond && node` works;
+- a falsy value (`null`, `undefined`, `false`, `""`, `0`), which is skipped, so `cond && node` works;
 - a whole JSON-LD document `{ "@context", "@graph" }`, for example from a CMS.
 
-It works in Server Components (it serializes on the server and sends only the string to a ~0.4 kB
-client component), in Client Components, and in the Pages Router.
+It works in Server Components (it serializes on the server and sends only the string to a ~0.5 kB
+client component), in Client Components, and in the Pages Router. In the browser a block is
+`application/ld+json` only while React shows it: content that React keeps hidden (a previous route
+under Cache Components, an `<Activity mode="hidden">`, a Suspense boundary showing its fallback again)
+gets an inactive type. See [hidden content](docs/design.md#hidden-content).
 
 ### `ref(node)`
 
@@ -183,37 +191,44 @@ type error. If the node's `@id` has a literal type (`` `${SITE}/#org` as const `
 The string `JsonLd` renders, for anything outside React: route handlers, feeds, other renderers, tests.
 It's pure and never logs. In order, it:
 
-1. flattens arrays and `@graph` documents and drops `null`/`undefined`/`false`;
+1. flattens arrays and `@graph` documents and drops falsy values (an object with a `@graph` and
+   properties of its own is kept as a node too);
 2. removes a node's `@context` when it is just schema.org (`http`/`https`, with or without `/`), and keeps
    any other;
-3. merges nodes that share an `@id`: properties are combined, the first value wins on a conflict, and
-   the merged node sits where the first one was;
+3. merges nodes that share an `@id` and a `@context`: properties are combined, the first value wins on
+   a conflict, and the merged node sits where the first one was;
 4. wraps the result as `{"@context":"https://schema.org","@graph":[…]}`;
-5. runs `JSON.stringify` and escapes `<`, `>`, `&`, U+2028 and U+2029 (see [Security](#security)).
+5. runs `JSON.stringify` and escapes `<`, `>`, `&`, U+2028 and U+2029 ([security](docs/security.md)).
 
-Values follow JSON: `null` is kept, `undefined` and functions are dropped, `Date` and `URL` become
-strings, and a `BigInt` or a cycle throws.
+Values follow `JSON.stringify`: `null` is kept; `undefined`, functions and symbols are dropped; `Date`
+and `URL` become strings; `NaN` and `Infinity` become `null`; a `Set` or `Map` becomes `{}`; and a
+`BigInt` or a cycle throws, failing the render like a hand-written `JSON.stringify` would.
 
 ### `check(htmlOrDom)` from `ldgraph/check`
 
-Reads every active JSON-LD block on a page, merges them as a JSON-LD processor would, and returns a list
-of `Issue`s (`{ rule, message, id? }`), or `[]` for a clean page. Pass the HTML as a string, or a
+Reads every active JSON-LD block on a page as one graph and returns a list of `Issue`s
+(`{ rule, message, id? }`), or `[]` for a clean page. Pass the HTML as a string (it is read the way a
+browser reads it: comments, `<template>` content and the text of other scripts don't count), or a
 `document`/element. See [Dev warnings](#dev-warnings) for the rules.
 
-### Types, and `satisfies`
+### Types
 
-`Node` is deliberately minimal: an object with a `@type` (or an `@id` that adds to a node defined
-elsewhere). The vocabulary comes from [schema-dts](https://github.com/google/schema-dts), which ldgraph
-never imports; you check values with `satisfies`:
+`Nodes` is deliberately minimal: an object with a `@type` (or an `@id` that adds to a node defined
+elsewhere), a document, a falsy value, or an array of these. The vocabulary comes from
+[schema-dts](https://github.com/google/schema-dts), which ldgraph never imports. Both ways of using it work,
+with schema-dts 1.x and 2.x:
 
 ```ts
+// satisfies: checks the literal and keeps its exact shape, so ref() gets a typed @id.
 const org = { "@type": "Organization", "@id": `${SITE}/#organization`, nmae: "Example" } satisfies Organization;
-//                                                                     ^^^^ error: did you mean "name"?
+//                                                                     ~~~~ 'nmae' does not exist in type 'OrganizationLeaf'
+
+// An annotation, as the Next.js docs write it: fine for <JsonLd graph={jsonLd} />.
+const jsonLd: WithContext<Product> = { "@context": "https://schema.org", "@type": "Product", name: "Widget" };
 ```
 
-**Use `satisfies`, not an annotation.** `const org: Organization = …` widens the value to schema-dts's
-union, which includes plain `string`, and ldgraph rejects it. `satisfies` checks the value and keeps its
-literal shape. Both schema-dts 1.x and 2.x work.
+Prefer `satisfies` for nodes you `ref()`: an annotated value's `@id` is optional in schema-dts, so
+`ref()` rejects it.
 
 ## Testing your site
 
@@ -232,19 +247,20 @@ In Playwright, `check(await page.content())` checks the live DOM after navigatio
 
 ## Dev warnings
 
-In development, ldgraph warns once per message in the terminal and in the browser console, for example
-`[ldgraph] dangling-ref: https://example.com/#org (from https://example.com/blog/x#article.publisher)`.
-Each rule runs in exactly one place, so nothing is reported twice. Production builds contain none of
-this code.
+In development, ldgraph checks each block in the terminal (the rules that need one block) and the whole
+page in the browser console (the rules that need every block). For example, in the browser:
+`[ldgraph] dangling-ref: https://example.com/#org (from https://example.com/blog/x#article.publisher); did you mean https://example.com/#organization?`.
+Each rule runs in one place only, and an issue is printed again only after it has been gone for a
+moment. Production builds contain none of this code.
 
 | Rule | What it means | Where |
 | --- | --- | --- |
-| `relative-id` | An `@id` without a scheme (`#org`, `/about`). `_:` blank nodes are fine. | server |
-| `conflict` | Two nodes with the same `@id` give one property different values. ldgraph keeps the first. | server (one block), browser (across blocks) |
-| `product` | A Product needs `name` and one of `offers`, `review` or `aggregateRating` (Google's product snippet minimum). | server |
-| `breadcrumb` | Every ListItem needs `position` and `name`; every one but the last needs `item`. | server |
+| `relative-id` | An `@id` without a scheme (`#org`, `/about`). `_:` blank nodes are fine. | terminal |
+| `conflict` | Two definitions of one `@id` give a property different values. In one block ldgraph keeps the first; across blocks the page's graph holds both. | terminal (one block), browser (across blocks) |
+| `product` | A Product needs `name` and one of `offers`, `review` or `aggregateRating` (Google's product snippet minimum). | terminal |
+| `breadcrumb` | Every ListItem needs `position` and `name`; every one but the last needs `item`. | terminal |
 | `dangling-ref` | A `{ "@id" }` reference to a node that no block on the page defines, on a site that does define nodes here. Links to other sites (Wikidata, …) are fine. | browser |
-| `missing-type` | A node with no `@type` after merging the page, or a node with neither `@id` nor `@type`. | browser |
+| `missing-type` | A node with no `@type` after reading the whole page, or a node with neither `@id` nor `@type`. | browser |
 | `missing-context` | A block with no `@context` (hand-written or third-party blocks; ldgraph's always have one). | browser |
 | `invalid-json` | A block that isn't valid JSON. | browser |
 
@@ -253,42 +269,18 @@ and [Google's Rich Results Test](https://search.google.com/test/rich-results) is
 
 ## Security
 
-Text inside `<script>` is not HTML-escaped by the browser: the element ends at the first `</script`
-followed by a space, `/` or `>`, in any case, and `<!--` changes how the tokenizer reads what follows.
-So any string your graph carries from a CMS or a user can break out of the block unless it is escaped.
-
-ldgraph escapes `<`, `>`, `&`, U+2028 and U+2029 as `\u003c`, `\u003e`, `\u0026`, `\u2028` and
-`\u2029`, the same set Next.js uses for its own inline data. These characters can only appear inside
-JSON strings, where the escape decodes back to the original character, so:
-
-- **it is safe**: no `<` ever reaches the HTML, so no end tag, comment or CDATA marker can form;
-- **it is lossless**: `JSON.parse` of the block gives back exactly the data you passed in.
-
-Other common approaches fall short of one or the other. Replacing only `</script>` misses
-`</script >`, `</SCRIPT/` and similar spellings. Escaping strings as HTML entities (`&amp;`, `&lt;`) is
-safe but changes your data, because nothing decodes entities inside a script. ldgraph's test suite runs
-these inputs, and more, through a spec-compliant HTML parser.
-
-Rendering uses `dangerouslySetInnerHTML` with the escaped string, never React's own text escaping, so the
-output is the same on React 18 and 19.
-
-## Cache Components and hidden routes
-
-With Cache Components (`cacheComponents: true`, the create-next-app default), Next keeps up to three
-previous routes in the DOM, hidden inside React `<Activity>`. Their JSON-LD blocks would stay in the
-document, so analytics tags, browser extensions and agents reading the live DOM would see the previous
-pages' Articles alongside the current one.
-
-ldgraph handles this. While a route is hidden, its blocks get the type `text/x-ldgraph-inactive`; when
-the route is shown again they switch back to `application/ld+json`. Crawlers load pages fresh and see
-plain blocks; the server HTML is the same as a hand-written `<script>`.
+ldgraph escapes `<`, `>`, `&`, U+2028 and U+2029 as `\u003c`-style escapes, the set Next.js uses for its
+own inline data. They can only occur inside JSON strings, so the escaping is both safe (no `<` reaches
+the HTML, so no end tag, comment or CDATA marker can form) and lossless (`JSON.parse` gives back your
+data). Details, and what other approaches get wrong: [docs/security.md](docs/security.md).
 
 ## Pages Router, CMS JSON-LD, other React apps
 
 - **Pages Router**: the same component works in `pages/*.tsx` on React 18.3 or 19. Each page is the
   whole tree, so pass the whole graph from the page (one block).
 - **CMS or headless JSON-LD**: `graph={await res.json()}` accepts a whole `{ "@context", "@graph" }`
-  document and merges it with your own nodes. A CMS `@context` other than schema.org is kept, on its nodes.
+  document and merges it with your own nodes. A CMS `@context` other than schema.org is kept, on its
+  nodes, and nodes under different contexts are never merged.
 - **Other React apps**: `JsonLd` is plain React and should work in any RSC host (React Router, Waku) and
   in client-rendered apps, but only Next.js is tested. Outside React, use `serialize()`.
 
@@ -313,7 +305,7 @@ plain blocks; the server HTML is the same as a hand-written `<script>`.
   dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
 />
 
-// After
+// After: the same value, annotated (WithContext<Product>) or not
 <JsonLd graph={jsonLd} />
 ```
 

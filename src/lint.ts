@@ -17,11 +17,12 @@ const short = (v: unknown): string => {
   const s = JSON.stringify(v) ?? String(v);
   return s.length > 60 ? s.slice(0, 57) + "..." : s;
 };
-// JSON with sorted keys, so two values that differ only in key order compare equal.
-const canon = (v: unknown): string =>
-  JSON.stringify(v, (_, x: unknown) =>
-    isObj(x) ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : x,
-  );
+// A value as JSON-LD compares it: object keys in any order, arrays as sets, and `"A"` equal to `["A"]`.
+const canon = (v: unknown): string => {
+  if (Array.isArray(v)) return v.length === 1 ? canon(v[0]) : `[${v.map(canon).sort().join()}]`;
+  if (isObj(v)) return `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${canon(v[k])}`).join()}}`;
+  return JSON.stringify(v) ?? "null";
+};
 // The site an http(s) IRI belongs to. Other schemes (urn:, _:) never count as dangling.
 const origin = (iri: string): string | undefined => {
   try {
@@ -31,6 +32,20 @@ const origin = (iri: string): string | undefined => {
     return undefined;
   }
 };
+// Edit distance, for the "did you mean" of a dangling ref.
+const distance = (a: string, b: string): number => {
+  let row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const next = [i];
+    for (let j = 1; j <= b.length; j++) {
+      next[j] = Math.min(row[j]! + 1, next[j - 1]! + 1, row[j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    row = next;
+  }
+  return row[b.length]!;
+};
+// Keys other than these make an object with a @graph a node of its own (a named graph).
+const own = (v: Obj): boolean => Object.keys(v).some((k) => k !== "@context" && k !== "@graph" && k !== "@id" && v[k] !== undefined);
 
 /** The text of every active JSON-LD block under `root`. Inactive (hidden-route) blocks have another type. */
 export const blocksOf = (root: Root): string[] =>
@@ -38,7 +53,7 @@ export const blocksOf = (root: Root): string[] =>
 
 /**
  * Runs `rules` over the blocks of one page. A block is JSON text, or an already parsed JSON value.
- * Nodes that share an `@id` are merged across blocks first, as a JSON-LD processor would.
+ * All blocks are read as one graph: definitions that share an `@id` are compared with each other.
  */
 export function lint(blocks: readonly unknown[], rules: readonly Rule[]): Issue[] {
   const on = new Set(rules);
@@ -52,13 +67,14 @@ export function lint(blocks: readonly unknown[], rules: readonly Rule[]): Issue[
 
   const walk = (node: Obj, at: string, parentKey: string): void => {
     const id = node["@id"];
-    const keys = Object.keys(node);
+    const keys = Object.keys(node).filter((k) => k !== "@graph"); // top() reads a named graph's nodes
     const name = typeof id === "string" ? id : at;
     if (typeof id === "string") {
       if (!id.startsWith("_:") && !/^[a-z][a-z\d+.-]*:/i.test(id)) add("relative-id", at === id ? id : `${id} (from ${at})`, id);
       if (keys.length === 1) refs.push({ id, from: at });
       else {
-        const merged = defined.get(id) ?? defined.set(id, {}).get(id)!;
+        // No prototype, so keys such as "constructor" start out undefined like any other.
+        const merged = defined.get(id) ?? defined.set(id, Object.create(null) as Obj).get(id)!;
         for (const key of keys) {
           if (merged[key] === undefined) merged[key] = node[key];
           else if (canon(merged[key]) !== canon(node[key]))
@@ -92,21 +108,39 @@ export function lint(blocks: readonly unknown[], rules: readonly Rule[]): Issue[
       if (Array.isArray(v)) v.forEach((item) => top(item, ctx));
       else if (isObj(v)) {
         const has = ctx || v["@context"] !== undefined;
-        if (v["@graph"] !== undefined) return top(v["@graph"], has);
+        if (v["@graph"] !== undefined) {
+          top(v["@graph"], has);
+          if (!own(v)) return;
+        }
         const label = typeof v["@id"] === "string" ? v["@id"] : `${types(v).join(",") || "node"}${where}`;
         if (!has) add("missing-context", `${label} has no @context`, v["@id"] as string | undefined);
-        if (v["@id"] === undefined && v["@type"] === undefined) add("missing-type", `a node${where} has neither @id nor @type`);
+        if (v["@id"] === undefined && !types(v).length) add("missing-type", `a node${where} has neither @id nor @type`);
         walk(v, label, "");
       }
     };
     top(value, false);
   });
 
-  for (const [id, node] of defined) if (node["@type"] === undefined) add("missing-type", `${id} has no @type`, id);
+  for (const [id, node] of defined) if (!types(node).length) add("missing-type", `${id} has no @type`, id);
 
+  // The defined @id a dangling ref most likely meant: the same page with a longer or shorter
+  // fragment (#org for #organization), or a typo of at most two characters.
+  const near = (id: string): string | undefined => {
+    const [base, frag] = id.split("#");
+    let best: string | undefined;
+    let score = 3;
+    for (const d of defined.keys()) {
+      const [dBase, dFrag] = d.split("#");
+      const s = base === dBase && frag && dFrag && (dFrag.startsWith(frag) || frag.startsWith(dFrag)) ? 0 : distance(id, d);
+      if (s < score) [best, score] = [d, s];
+    }
+    return best;
+  };
   const sites = new Set([...defined.keys()].map(origin));
   for (const { id, from } of refs) {
-    if (!defined.has(id) && origin(id) !== undefined && sites.has(origin(id))) add("dangling-ref", `${id} (from ${from})`, id);
+    if (defined.has(id) || origin(id) === undefined || !sites.has(origin(id))) continue;
+    const guess = near(id);
+    add("dangling-ref", `${id} (from ${from})${guess ? `; did you mean ${guess}?` : ""}`, id);
   }
 
   const subjects = [...[...defined].map(([id, node]) => ({ node, label: id })), ...anonymous];
@@ -134,15 +168,26 @@ export function lint(blocks: readonly unknown[], rules: readonly Rule[]): Issue[
   return issues;
 }
 
-const reported = new Set<string>();
+/** What to do about an issue. Dev warnings add it; check() returns just the facts. */
+const HINTS: Partial<Record<Rule, string>> = {
+  "relative-id": "use an absolute @id such as https://your.site/page#name: a relative one is a different node on every URL",
+  "dangling-ref": "no active block on this page defines that @id",
+  conflict: "give the property one value: across blocks the page's graph holds both",
+  "missing-type": "add a @type where the node is defined",
+};
 
-/** Prints each issue once per process (server) or tab (browser). */
+const seen = new Map<string, number>();
+
+/**
+ * Prints each issue unless it was already seen in the last 2 s, so the several renders of one page
+ * warn once, and an issue that is fixed and comes back warns again.
+ */
 export function report(issues: readonly Issue[]): void {
+  const now = performance.now(); // not Date.now(), which Next flags while prerendering
+  if (seen.size > 500) seen.clear();
   for (const { rule, message } of issues) {
     const line = `[ldgraph] ${rule}: ${message}`;
-    if (!reported.has(line)) {
-      reported.add(line);
-      console.warn(line);
-    }
+    if (!(now - (seen.get(line) ?? -Infinity) < 2000)) console.warn(HINTS[rule] ? `${line} (${HINTS[rule]})` : line);
+    seen.set(line, now);
   }
 }

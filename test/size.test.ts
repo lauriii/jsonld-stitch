@@ -20,6 +20,8 @@ it("keeps the client component under 600 B gzipped", () => {
   expect(gz("script.js")).toBeLessThan(600);
 });
 
-it("keeps index + serialize + script under 1.5 kB gzipped", () => {
-  expect(gz("index.js", "serialize.js", "script.js")).toBeLessThan(1500);
+// Unminified, so this over-counts what an app ships. 0.1.0 measured 1456 B; the client-mount fix for
+// hidden <Activity> content and the context-aware merge brought it to about 1.6 kB.
+it("keeps index + serialize + script under 1.7 kB gzipped", () => {
+  expect(gz("index.js", "serialize.js", "script.js")).toBeLessThan(1700);
 });

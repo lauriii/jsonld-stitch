@@ -58,7 +58,7 @@ describe("dev warnings", () => {
   const render = (g: Nodes) => renderToString(createElement(JsonLd, { graph: g }));
   const lines = () => warn.mock.calls.map((c: unknown[]) => c.join(" "));
 
-  it("warns on the server rules, once per message", () => {
+  it("warns on the server rules, once for the several renders of a page, with a hint", () => {
     process.env.NODE_ENV = "development";
     const bad = [
       { "@type": "Product", "@id": "#widget" },
@@ -74,17 +74,34 @@ describe("dev warnings", () => {
     // A conflict inside one block keeps the first value.
     expect(JSON.parse(html.slice(html.indexOf(">") + 1, -"</script>".length))["@graph"][0].name).toBe("A");
     expect(lines()).toEqual([
-      "[ldgraph] relative-id: #widget",
-      '[ldgraph] conflict: #widget name: "A" vs "B"',
+      "[ldgraph] relative-id: #widget (use an absolute @id such as https://your.site/page#name: a relative one is a different node on every URL)",
+      '[ldgraph] conflict: #widget name: "A" vs "B" (give the property one value: across blocks the page\'s graph holds both)',
       "[ldgraph] product: #widget needs offers, review or aggregateRating",
       "[ldgraph] breadcrumb: BreadcrumbList item 1 needs an item URL",
     ]);
   });
 
-  it("warns when ref() gets a node without an @id", () => {
+  it("warns again about an issue that went away and came back", () => {
     process.env.NODE_ENV = "development";
-    expect(ref({} as { "@id": string })).toEqual({ "@id": undefined });
-    expect(lines()).toEqual(["[ldgraph] ref() needs a node with an @id"]);
+    vi.useFakeTimers();
+    try {
+      const bad = { "@type": "Thing", "@id": "#again" } as Nodes;
+      render(bad);
+      vi.advanceTimersByTime(1_000);
+      render(bad); // the same page rendering again: quiet
+      vi.advanceTimersByTime(3_000);
+      render(bad); // fixed and reintroduced, or a later visit: warns again
+      expect(lines().filter((l: string) => l.startsWith("[ldgraph] relative-id: #again "))).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("warns when ref() gets a node without an @id, and shows the node", () => {
+    process.env.NODE_ENV = "development";
+    const node = { "@type": "Thing" } as unknown as { "@id": string };
+    expect(ref(node)).toEqual({ "@id": undefined });
+    expect(warn.mock.calls).toEqual([["[ldgraph] ref() needs a node with an @id, but got:", node]]);
   });
 
   it("is silent in production", () => {
